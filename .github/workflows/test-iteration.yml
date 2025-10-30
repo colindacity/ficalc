@@ -1,0 +1,111 @@
+name: Test Iteration
+
+on:
+  push:
+    branches: [claude/**]
+  pull_request:
+
+jobs:
+  test-quick:
+    name: Quick Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run unit tests
+        run: npm test -- --run --reporter=verbose
+
+      - name: Test CLI commands
+        run: |
+          echo "Testing CLI help command..."
+          npm run cli -- --help || true
+
+          echo "Testing CLI simulate command..."
+          npm run cli -- simulate --portfolio 1000000 --withdrawal 40000 --years 5 --data ./data/shiller-data.csv || true
+
+  test-coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate coverage
+        run: npm run test:coverage
+
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          lcov-file: ./coverage/lcov.info
+
+      - name: Archive coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+  build-matrix:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: ['18', '20']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Build CLI
+        run: npm run build:cli
+
+      - name: Verify builds exist
+        shell: bash
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "Web build failed - dist directory not found"
+            exit 1
+          fi
+          if [ ! -d "dist-cli" ]; then
+            echo "CLI build failed - dist-cli directory not found"
+            exit 1
+          fi

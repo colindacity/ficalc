@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "target": "ES2020",
+    "lib": ["ES2020"],
+    "outDir": "./dist-cli",
+    "rootDir": "./src",
+    "noEmit": false,
+    "jsx": "preserve"
+  },
+  "include": ["src/cli.ts", "src/engine/**/*", "src/utils/**/*", "src/types.ts"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts", "node_modules"]
+}

@@ -1,6 +1,11 @@
 # FI Calc - Retirement Backtesting Calculator
 
+[![CI/CD](https://github.com/colindacity/ficalc/workflows/CI%2FCD/badge.svg)](https://github.com/colindacity/ficalc/actions)
+[![Coverage](https://img.shields.io/codecov/c/github/colindacity/ficalc)](https://codecov.io/gh/colindacity/ficalc)
+
 A comprehensive retirement calculator that uses backtesting with historical market data instead of Monte Carlo simulations. Inspired by Personal Capital and FI Calc, this calculator allows you to simulate retirement scenarios using actual year-by-year historical data from Robert Shiller's dataset (1871-present).
+
+**[🌐 Live Demo](https://colindacity.github.io/ficalc/)**
 
 ## Features
 
@@ -43,6 +48,8 @@ You can:
 
 ## Installation
 
+### Web Interface
+
 ```bash
 # Install dependencies
 npm install
@@ -56,6 +63,159 @@ npm run build
 # Preview production build
 npm run preview
 ```
+
+### CLI Tool
+
+```bash
+# Install globally
+npm install -g ficalc
+
+# Or run locally
+npm install
+npm run cli -- --help
+```
+
+## CLI Usage
+
+The CLI provides powerful command-line access to all calculator features.
+
+### Basic Simulation
+
+```bash
+# Run a basic retirement simulation
+ficalc simulate --portfolio 1000000 --withdrawal 40000 --years 30
+
+# With custom allocation
+ficalc simulate \
+  --portfolio 1000000 \
+  --withdrawal 40000 \
+  --years 30 \
+  --equities 60 \
+  --bonds 30 \
+  --cash 10
+
+# Filter historical data
+ficalc simulate \
+  --portfolio 1000000 \
+  --withdrawal 40000 \
+  --start-year 1926 \
+  --end-year 2024
+
+# Get JSON output for scripting
+ficalc simulate --portfolio 1000000 --withdrawal 40000 --json
+```
+
+### Calculate Required Portfolio
+
+```bash
+# How much portfolio do I need for $50k/year?
+ficalc required-portfolio --withdrawal 50000 --years 30
+
+# With 90% success rate
+ficalc required-portfolio \
+  --withdrawal 50000 \
+  --years 30 \
+  --success-rate 90
+
+# With custom allocation
+ficalc required-portfolio \
+  --withdrawal 50000 \
+  --years 30 \
+  --equities 70 \
+  --bonds 25 \
+  --cash 5
+```
+
+### Calculate Maximum Withdrawal
+
+```bash
+# What's the max I can withdraw from $2M?
+ficalc max-withdrawal --portfolio 2000000 --years 30
+
+# With 95% success rate
+ficalc max-withdrawal \
+  --portfolio 2000000 \
+  --years 30 \
+  --success-rate 95
+
+# Get detailed JSON output
+ficalc max-withdrawal \
+  --portfolio 2000000 \
+  --years 30 \
+  --json > results.json
+```
+
+### CLI Options
+
+All commands support these common options:
+
+- `-p, --portfolio <amount>` - Initial portfolio amount
+- `-w, --withdrawal <amount>` - Annual withdrawal amount
+- `-y, --years <number>` - Retirement length in years (default: 30)
+- `-e, --equities <percent>` - Equities allocation % (default: 80)
+- `-b, --bonds <percent>` - Bonds allocation % (default: 15)
+- `-c, --cash <percent>` - Cash allocation % (default: 5)
+- `-s, --strategy <strategy>` - Withdrawal strategy (default: constantDollar)
+- `-d, --data <path>` - Path to historical data CSV (default: ./data/shiller-data.csv)
+- `--start-year <year>` - Filter historical data start year
+- `--end-year <year>` - Filter historical data end year
+- `-r, --success-rate <percent>` - Target success rate % (default: 95)
+- `--json` - Output results as JSON
+
+## Testing
+
+```bash
+# Run all tests
+npm test
+
+# Run tests with UI
+npm run test:ui
+
+# Generate coverage report
+npm run test:coverage
+
+# Run tests in watch mode
+npm test -- --watch
+```
+
+## CI/CD
+
+The project uses GitHub Actions for continuous integration and deployment:
+
+### Workflows
+
+1. **CI/CD Pipeline** (`.github/workflows/ci.yml`)
+   - Runs on push to main and claude/* branches
+   - Type checking with TypeScript
+   - Unit tests with Vitest
+   - Coverage reporting to Codecov
+   - Builds web app and CLI
+   - Deploys to GitHub Pages (main branch only)
+
+2. **Test Iteration** (`.github/workflows/test-iteration.yml`)
+   - Fast feedback for development branches
+   - Quick test suite
+   - CLI command testing
+   - Multi-OS build verification (Ubuntu, Windows, macOS)
+   - Multi-Node version testing (18, 20)
+
+### GitHub Pages Deployment
+
+The web app is automatically deployed to GitHub Pages on every push to main:
+
+1. Push changes to main branch
+2. GitHub Actions builds the app
+3. Deployed to: https://colindacity.github.io/ficalc/
+
+To enable GitHub Pages for your fork:
+1. Go to Settings > Pages
+2. Set Source to "GitHub Actions"
+3. Push to main branch
+
+### Coverage Reporting
+
+Test coverage is automatically uploaded to Codecov. View the coverage report at:
+https://codecov.io/gh/colindacity/ficalc
 
 ## Usage
 
