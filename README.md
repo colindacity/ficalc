@@ -190,7 +190,12 @@ The project uses GitHub Actions for continuous integration and deployment:
    - Unit tests with Vitest
    - Coverage reporting to Codecov
    - Builds web app and CLI
-   - Deploys to GitHub Pages (main branch only)
+   - **Auto-retry logic**: 3 attempts for build failures with progressive cleanup
+   - **Build verification**: Validates dist artifacts before deployment
+   - **Deployment retry**: 3 attempts with exponential backoff (30s, 60s)
+   - **Health checks**: Verifies site accessibility after deployment (3 attempts)
+   - **Smoke tests**: Validates CSS, JavaScript, and response time
+   - **Content verification**: Ensures critical page elements are present
 
 2. **Test Iteration** (`.github/workflows/test-iteration.yml`)
    - Fast feedback for development branches
@@ -198,6 +203,21 @@ The project uses GitHub Actions for continuous integration and deployment:
    - CLI command testing
    - Multi-OS build verification (Ubuntu, Windows, macOS)
    - Multi-Node version testing (18, 20)
+
+3. **Deployment Monitor** (`.github/workflows/monitor.yml`)
+   - Runs every 15 minutes via cron schedule
+   - Continuous health monitoring of live site
+   - Response time tracking
+   - Content integrity checks
+   - **Auto-creates GitHub issue** if site is down
+   - Manual trigger available via workflow_dispatch
+
+4. **Rollback Workflow** (`.github/workflows/rollback.yml`)
+   - Manual rollback to previous deployment
+   - Specify commit SHA or rollback to HEAD~1
+   - Builds and deploys previous version
+   - Verifies rollback deployment
+   - Triggered manually via GitHub Actions UI
 
 ### GitHub Pages Deployment
 
@@ -216,6 +236,49 @@ To enable GitHub Pages for your fork:
 
 Test coverage is automatically uploaded to Codecov. View the coverage report at:
 https://codecov.io/gh/colindacity/ficalc
+
+### Deployment Monitoring & Reliability
+
+The CI/CD pipeline includes comprehensive monitoring and auto-recovery:
+
+**Auto-Retry Logic:**
+- Build failures: 3 attempts with progressive cleanup
+  1. Clean Vite cache and retry
+  2. Full clean (dist + node_modules) and reinstall
+  3. Final attempt with fresh dependencies
+- Deployment failures: 3 attempts with exponential backoff
+  1. Immediate retry
+  2. Wait 30s, retry
+  3. Wait 60s, final attempt
+
+**Health Verification:**
+- 60s wait for CDN propagation
+- 3 health check attempts
+- HTTP status code validation
+- Content integrity verification
+- Response time monitoring
+- CSS/JavaScript resource validation
+
+**Continuous Monitoring:**
+- Automated health checks every 15 minutes
+- Site availability monitoring
+- Performance tracking
+- Auto-creates GitHub issue if site goes down
+
+**Rollback Capability:**
+- Manual rollback workflow available
+- Go to Actions → Rollback Deployment
+- Choose commit or use previous version
+- Automated build and deployment of rollback version
+
+**Viewing Deployment Status:**
+```bash
+# Check latest deployment
+curl -I https://colindacity.github.io/ficalc/
+
+# View in GitHub
+# Go to: Settings > Pages > View deployment history
+```
 
 ## Usage
 

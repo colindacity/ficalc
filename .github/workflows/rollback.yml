@@ -1,0 +1,102 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: 'Commit SHA to rollback to (leave empty for previous deployment)'
+        required: false
+        type: string
+
+jobs:
+  rollback:
+    name: Rollback to Previous Version
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: https://colindacity.github.io/ficalc/
+
+    steps:
+      - name: Determine rollback target
+        id: target
+        run: |
+          if [ -z "${{ inputs.commit_sha }}" ]; then
+            echo "No commit specified, will rollback to previous commit"
+            echo "target=HEAD~1" >> $GITHUB_OUTPUT
+          else
+            echo "Rolling back to specified commit: ${{ inputs.commit_sha }}"
+            echo "target=${{ inputs.commit_sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout target version
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.target.outputs.target }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build rollback version
+        run: npm run build
+        env:
+          PUBLIC_URL: /ficalc
+
+      - name: Verify rollback build
+        run: |
+          echo "Verifying rollback build..."
+          if [ ! -d "dist" ] || [ ! -f "dist/index.html" ]; then
+            echo "❌ Rollback build verification failed!"
+            exit 1
+          fi
+          echo "✅ Rollback build verified"
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload rollback artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      - name: Deploy rollback
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Verify rollback deployment
+        run: |
+          echo "Waiting for rollback to propagate..."
+          sleep 60
+
+          SITE_URL="https://colindacity.github.io/ficalc/"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$SITE_URL" || echo "000")
+
+          if [ "$HTTP_CODE" == "200" ]; then
+            echo "✅ Rollback deployment verified!"
+            echo "🔙 Site rolled back successfully to: ${{ steps.target.outputs.target }}"
+          else
+            echo "⚠️  Rollback deployment may need more time to propagate"
+            echo "Status code: $HTTP_CODE"
+          fi
+
+      - name: Rollback summary
+        if: always()
+        run: |
+          echo "===================="
+          echo "Rollback Summary"
+          echo "===================="
+          echo "Target: ${{ steps.target.outputs.target }}"
+          echo "Deployment Status: ${{ steps.deployment.outcome }}"
+          echo "Site URL: https://colindacity.github.io/ficalc/"
+          echo "===================="

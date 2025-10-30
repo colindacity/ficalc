@@ -1,0 +1,98 @@
+name: Deployment Monitor
+
+on:
+  schedule:
+    # Run health checks every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  monitor:
+    name: Monitor Deployment Health
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Health check
+        id: health
+        continue-on-error: true
+        run: |
+          echo "Checking deployment health..."
+          SITE_URL="https://colindacity.github.io/ficalc/"
+
+          # Check if site is up
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$SITE_URL" || echo "000")
+          echo "HTTP Status Code: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Site is down! Status code: $HTTP_CODE"
+            exit 1
+          fi
+
+          # Check response time
+          RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}' "$SITE_URL")
+          echo "Response time: ${RESPONSE_TIME}s"
+
+          # Alert if response time is too slow (> 5 seconds)
+          if (( $(echo "$RESPONSE_TIME > 5.0" | bc -l) )); then
+            echo "⚠️  Warning: Slow response time"
+          fi
+
+          # Check if page contains critical content
+          CONTENT=$(curl -s "$SITE_URL")
+          if ! echo "$CONTENT" | grep -q "FI Calc"; then
+            echo "❌ Critical content missing!"
+            exit 1
+          fi
+
+          echo "✅ All health checks passed"
+
+      - name: Create issue if health check fails
+        if: failure() && steps.health.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🚨 Deployment Health Check Failed';
+            const body = `## Deployment Health Check Failed
+
+            The automated health check for the deployment has failed.
+
+            **Details:**
+            - Time: ${new Date().toISOString()}
+            - Workflow: ${context.workflow}
+            - Run ID: ${context.runId}
+
+            **Action Required:**
+            1. Check the deployment at https://colindacity.github.io/ficalc/
+            2. Review recent commits that may have caused the issue
+            3. Consider running the rollback workflow if needed
+
+            [View workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId})
+            `;
+
+            // Check if issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'deployment-failure'
+            });
+
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['deployment-failure', 'automated']
+              });
+            }
+
+      - name: Monitor summary
+        if: always()
+        run: |
+          echo "===================="
+          echo "Monitor Summary"
+          echo "===================="
+          echo "Health Check: ${{ steps.health.outcome }}"
+          echo "Time: $(date)"
+          echo "===================="
