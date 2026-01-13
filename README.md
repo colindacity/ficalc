@@ -164,8 +164,10 @@ All commands support these common options:
 
 ## Testing
 
+### Unit Tests
+
 ```bash
-# Run all tests
+# Run all unit tests
 npm test
 
 # Run tests with UI
@@ -177,6 +179,35 @@ npm run test:coverage
 # Run tests in watch mode
 npm test -- --watch
 ```
+
+### End-to-End Tests
+
+```bash
+# Run E2E tests locally
+npm run test:e2e
+
+# Open Playwright UI (interactive)
+npm run test:e2e:ui
+
+# Run with browser visible
+npm run test:e2e:headed
+
+# Debug mode
+npm run test:e2e:debug
+
+# Test production deployment
+npm run test:prod
+```
+
+**E2E Test Coverage:**
+- ✅ Smoke tests (page load, UI elements, no errors)
+- ✅ Configuration (all input fields and selections)
+- ✅ Simulation execution (calculation flow)
+- ✅ Results display (statistics, charts, year details)
+- ✅ Accessibility (keyboard nav, ARIA, contrast)
+- ✅ Performance (load time, TTI, calculation speed)
+- ✅ Cross-browser (Chrome, Firefox, Safari)
+- ✅ Mobile responsiveness (iOS, Android)
 
 ## CI/CD
 
@@ -218,6 +249,16 @@ The project uses GitHub Actions for continuous integration and deployment:
    - Builds and deploys previous version
    - Verifies rollback deployment
    - Triggered manually via GitHub Actions UI
+
+5. **E2E Production Tests** (`.github/workflows/e2e-prod.yml`)
+   - Runs after every deployment
+   - Hourly scheduled checks
+   - Tests live production site
+   - 3 retry attempts with backoff
+   - **6 test suites**: smoke, config, simulation, results, a11y, performance
+   - Records videos of failures
+   - **Auto-creates issue** if tests fail
+   - Uploads test reports as artifacts
 
 ### GitHub Pages Deployment
 
