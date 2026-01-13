@@ -5,9 +5,14 @@ node_modules/
 
 # Testing
 /coverage
+/test-results
+/playwright-report
+/playwright-report-prod
+playwright/.cache
 
 # Production
 /dist
+/dist-cli
 /build
 
 # Misc
